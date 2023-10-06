@@ -13,7 +13,8 @@ var cfg = gogadgets.Config{
 }
 
 func main() {
-	app := gogadgets.New(&cfg)
+	u := ui{}
+	app := gogadgets.New(&cfg, &u)
 	app.Start()
 }
 
@@ -26,4 +27,8 @@ func (u *ui) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message)
 		msg := <-input
 		fmt.Printf("%+v\n", msg)
 	}
+}
+
+func (u ui) GetUID() string {
+	return "ui"
 }
