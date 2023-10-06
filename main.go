@@ -32,3 +32,7 @@ func (u *ui) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message)
 func (u ui) GetUID() string {
 	return "ui"
 }
+
+func (u ui) GetDirection() string {
+	return "input"
+}
