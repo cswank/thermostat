@@ -13,7 +13,7 @@ var cfg = gogadgets.Config{
 }
 
 func main() {
-	app := gogadgets.New(cfg)
+	app := gogadgets.New(&cfg)
 	app.Start()
 }
 
