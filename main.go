@@ -8,7 +8,7 @@ import (
 
 var cfg = gogadgets.Config{
 	Master: "http://192.168.88.234:6111",
-	Host:   "http://192.168.88.254",
+	Host:   "http://192.168.88.254:6114",
 	Port:   6114,
 }
 
