@@ -23,8 +23,7 @@ type ui struct {
 }
 
 func (u *ui) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message) {
-	for {
-		msg := <-input
+	for msg := range input {
 		fmt.Printf("%+v\n", msg)
 	}
 }
