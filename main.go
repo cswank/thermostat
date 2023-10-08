@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/cswank/gogadgets"
+	"github.com/cswank/thermostat/internal/ui"
 )
 
 var cfg = gogadgets.Config{
@@ -13,25 +14,11 @@ var cfg = gogadgets.Config{
 }
 
 func main() {
-	u := ui{}
+	u, err := ui.New(14, 15, 16)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	app := gogadgets.New(&cfg, &u)
 	app.Start()
-}
-
-type ui struct {
-	out chan<- gogadgets.Message
-}
-
-func (u *ui) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message) {
-	for msg := range input {
-		fmt.Printf("%+v\n", msg)
-	}
-}
-
-func (u ui) GetUID() string {
-	return "ui"
-}
-
-func (u ui) GetDirection() string {
-	return "input"
 }

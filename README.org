@@ -1,10 +1,8 @@
-# thermostat
+* Thermostat
+** Hardware Debounce
+https://raspberrypi.stackexchange.com/questions/118349/what-is-the-proper-way-to-debounce-a-gpio-input
 
-Arduino example:
-
-/*
-(Copy and paste)
-
+** Arduino Example:
 Rotary encoder decoding using two interrupt lines.
 Most Arduino boards have two external interrupts,
 numbers 0 (on digital pin 2) and 1 (on digital pin 3).
@@ -13,17 +11,14 @@ Program sketch is for SparkFun Rotary Encoder sku: COM-09117
 Connect the middle pin of the three to ground.
 The outside two pins of the three are connected to
 digital pins 2 and 3
-*/
 
-
-
+#+begin_src c
 volatile int number = 0;                // Testnumber, print it when it changes value,
                                         // used in loop and both interrupt routines
 int oldnumber = number;
 
 volatile boolean halfleft = false;      // Used in both interrupt routines
 volatile boolean halfright = false;
-
 
 void setup(){
   Serial.begin(9600);
@@ -54,6 +49,7 @@ void isr_2(){                                              // Pin2 went LOW
     }
   }
 }
+
 void isr_3(){                                             // Pin3 went LOW
   delay(1);                                               // Debounce time
   if(digitalRead(3) == LOW){                              // Pin3 still LOW ?
@@ -66,3 +62,4 @@ void isr_3(){                                             // Pin3 went LOW
     }
   }
 }
+#+end_src
