@@ -17,10 +17,12 @@ type (
 )
 
 func (f Fake) Print(s string) {
-	fmt.Println(s)
+	fmt.Printf("\r%s", s)
 }
 
-func (f Fake) Off() {}
+func (f Fake) Off() {
+	fmt.Print("\r  ")
+}
 
 func (f Fake) Wait() error {
 	ch := make(chan int)

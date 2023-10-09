@@ -26,14 +26,16 @@ func main() {
 
 	var a, b, c gpio.Waiter
 	var l gpio.Printer
+	var debug bool
 	if *fk {
 		a, b, c, l = fake()
+		debug = true
 	} else {
 		a, b, c, l = real()
 
 	}
 
-	u := ui.New(a, b, c, l)
+	u := ui.New(a, b, c, l, debug)
 	app := gogadgets.New(&cfg, &u)
 	app.Start()
 }

@@ -18,6 +18,7 @@ type (
 		out         chan<- gogadgets.Message
 		ti          chan int
 		bi          chan button.State
+		debug       bool
 		temperature struct {
 			set    int
 			actual int
@@ -25,15 +26,16 @@ type (
 	}
 )
 
-func New(btn, A, B gpio.Waiter, led gpio.Printer) UI {
+func New(btn, A, B gpio.Waiter, led gpio.Printer, debug bool) UI {
 	ti := make(chan int)
 	bi := make(chan button.State)
 	u := UI{
-		ti:   ti,
-		bi:   bi,
-		dial: dial.New(A, B, temperatureInput(ti)),
-		btn:  button.New(btn, buttonInput(bi)),
-		led:  led,
+		ti:    ti,
+		bi:    bi,
+		dial:  dial.New(A, B, temperatureInput(ti)),
+		btn:   button.New(btn, buttonInput(bi)),
+		led:   led,
+		debug: debug,
 	}
 
 	go u.dial.Start()
@@ -42,23 +44,39 @@ func New(btn, A, B gpio.Waiter, led gpio.Printer) UI {
 	return u
 }
 
-// Start is called by the gogadgets app
 func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message) {
 	u.out = out
 	for msg := range input {
-		if msg.Sender != "home temperature" {
+		if msg.Type != "update" {
 			continue
 		}
 
-		switch msg.Type {
-		case "update":
+		switch msg.Sender {
+		case "home temperature":
 			v, ok := msg.Value.ToFloat()
 			if ok {
 				u.temperature.actual = int(v)
+				if u.debug {
+					u.ti <- int(v)
+				}
 			}
-		case "command":
-			f, _, _ := gogadgets.ParseCommand(msg.Body)
-			u.temperature.set = int(f)
+		case "home furnace":
+			if msg.TargetValue == nil {
+				continue
+			}
+
+			switch msg.Value.Cmd {
+			case "turn off furnace":
+				u.bi <- button.Off
+			case "heat home":
+				u.bi <- button.Heat
+				f, _ := msg.TargetValue.ToFloat()
+				u.temperature.set = int(f)
+			case "cool home":
+				u.bi <- button.Cool
+				f, _ := msg.TargetValue.ToFloat()
+				u.temperature.set = int(f)
+			}
 		}
 	}
 

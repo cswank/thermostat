@@ -73,10 +73,10 @@ func (s State) next() State {
 func (s State) String() string {
 	switch s {
 	case Cool:
-		return "cool"
+		return "CL"
 	case Heat:
-		return "heat"
+		return "HE"
 	default:
-		return "off"
+		return "OF"
 	}
 }
