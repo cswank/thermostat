@@ -3,47 +3,26 @@ package dial
 import (
 	"fmt"
 	"log"
-	"strconv"
 
-	"github.com/cswank/gogadgets"
+	"github.com/cswank/thermostat/internal/gpio"
 )
 
 type (
 	Dial struct {
-		a     *gogadgets.GPIO
-		b     *gogadgets.GPIO
+		a     gpio.Waiter
+		b     gpio.Waiter
 		f     func(i int)
 		close chan bool
 	}
 )
 
-func New(a, b int, f func(i int)) (Dial, error) {
-	p1, err := gogadgets.NewGPIO(&gogadgets.Pin{
-		Pin:       strconv.Itoa(a),
-		Platform:  "rpi",
-		Direction: "in",
-		Edge:      "falling",
-		ActiveLow: "0",
-	})
-
-	if err != nil {
-		return Dial{}, err
-	}
-
-	p2, err := gogadgets.NewGPIO(&gogadgets.Pin{
-		Pin:       strconv.Itoa(b),
-		Platform:  "rpi",
-		Direction: "in",
-		Edge:      "falling",
-		ActiveLow: "0",
-	})
-
+func New(p1, p2 gpio.Waiter, f func(i int)) Dial {
 	return Dial{
 		f:     f,
-		a:     p1.(*gogadgets.GPIO),
-		b:     p2.(*gogadgets.GPIO),
+		a:     p1,
+		b:     p2,
 		close: make(chan bool),
-	}, err
+	}
 }
 
 func (d Dial) Start() {
@@ -82,7 +61,7 @@ func (d Dial) Close() {
 	}()
 }
 
-func wait(p *gogadgets.GPIO, ch chan int) {
+func wait(p gpio.Waiter, ch chan int) {
 	for {
 		if err := p.Wait(); err != nil {
 			log.Println("unable to wait for gpio pin")

@@ -2,16 +2,15 @@ package button
 
 import (
 	"log"
-	"strconv"
 
-	"github.com/cswank/gogadgets"
+	"github.com/cswank/thermostat/internal/gpio"
 )
 
 type (
 	State int
 
 	Button struct {
-		gpio  *gogadgets.GPIO
+		gpio  gpio.Waiter
 		f     func(s State)
 		close chan bool
 	}
@@ -23,20 +22,12 @@ const (
 	Cool State = 2
 )
 
-func New(pin int, f func(State)) (Button, error) {
-	g, err := gogadgets.NewGPIO(&gogadgets.Pin{
-		Pin:       strconv.Itoa(pin),
-		Platform:  "rpi",
-		Direction: "in",
-		Edge:      "falling",
-		ActiveLow: "0",
-	})
-
+func New(g gpio.Waiter, f func(State)) Button {
 	return Button{
-		gpio:  g.(*gogadgets.GPIO),
+		gpio:  g,
 		f:     f,
 		close: make(chan bool),
-	}, err
+	}
 }
 
 func (b Button) Start() {
@@ -62,7 +53,7 @@ func (b Button) Close() {
 	}()
 }
 
-func wait(p *gogadgets.GPIO, ch chan struct{}) {
+func wait(p gpio.Waiter, ch chan struct{}) {
 	for {
 		if err := p.Wait(); err != nil {
 			log.Println("unable to wait for gpio pin")
