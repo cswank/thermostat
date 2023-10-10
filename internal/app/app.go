@@ -18,13 +18,11 @@ var cfg = gogadgets.Config{
 	Port:   6114,
 }
 
-func Start(fakeDeps bool) {
+func Start(fakeDeps, debug bool) {
 	var a, b, c gpio.Waiter
 	var l gpio.Printer
-	var debug bool
 	if fakeDeps {
 		a, b, c, l = &fake{}, &fake{}, &fake{}, &fake{}
-		debug = true
 	} else {
 		a, b, c, l = real()
 	}
