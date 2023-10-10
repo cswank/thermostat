@@ -1,13 +1,17 @@
 * Thermostat
+** Rotary Encoder
+https://www.sparkfun.com/products/9117
+
 ** Epoll
 https://github.com/davecheney/gpio/blob/master/gpio_linux.go
 
 ** Hardware Debounce
 https://raspberrypi.stackexchange.com/questions/118349/what-is-the-proper-way-to-debounce-a-gpio-input
-
+https://www.digikey.com/en/articles/how-to-implement-hardware-debounce-for-switches-and-relays
 ** LED
 http://www.xlitx.com/datasheet/5621AH.pdf
-
+http://www.xlitx.com/Products/7-segment-led-dot-matrix/5621ah.html
+https://www.jameco.com/Jameco/workshop/TechTip/working-with-seven-segment-displays.html
 ** Arduino Example:
 Rotary encoder decoding using two interrupt lines.
 Most Arduino boards have two external interrupts,
