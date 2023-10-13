@@ -8,13 +8,12 @@ import (
 
 	"github.com/cswank/gogadgets"
 	"github.com/cswank/thermostat/internal/gpio"
-	"github.com/cswank/thermostat/internal/led"
 	"github.com/cswank/thermostat/internal/ui"
 )
 
 var cfg = gogadgets.Config{
 	Master: getenv("GOGADGETS_MASTER", "http://192.168.88.234:6111"),
-	Host:   getenv("GOGADGETS_HOST", "http://192.168.88.254:6114"),
+	Host:   getenv("GOGADGETS_HOST", "http://192.168.88.64:6114"),
 	Port:   6114,
 }
 
@@ -32,16 +31,17 @@ func Start(fakeDeps, debug bool) {
 	app.Start()
 }
 
-func real() (*gogadgets.GPIO, *gogadgets.GPIO, *gogadgets.GPIO, led.LED) {
-	g1, g2, g3 := newGPIO(14), newGPIO(15), newGPIO(16)
+func real() (*gogadgets.GPIO, *gogadgets.GPIO, *gogadgets.GPIO, gpio.Printer) {
+	g1, g2, g3 := newGPIO(18), newGPIO(15), newGPIO(16)
 
 	// TODO: real pins
-	l, err := led.New(
-		[7]int{0, 1, 2, 3, 4, 5, 6},
-		[7]int{0, 1, 2, 3, 4, 5, 6})
-	if err != nil {
-		log.Fatal(err)
-	}
+	// l, err := led.New(
+	// 	[7]int{0, 1, 2, 3, 4, 5, 6},
+	// 	[7]int{0, 1, 2, 3, 4, 5, 6})
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	l := &fake{}
 
 	return g1, g2, g3, l
 }
@@ -59,7 +59,7 @@ func pin(i int) *gogadgets.Pin {
 		Pin:       strconv.Itoa(i),
 		Platform:  "rpi",
 		Direction: "in",
-		Edge:      "falling",
+		Edge:      "both",
 		ActiveLow: "0",
 	}
 }
@@ -78,6 +78,10 @@ func (f fake) Wait() error {
 	ch := make(chan int)
 	<-ch
 	return nil
+}
+
+func (f fake) Open() (*os.File, error) {
+	return os.Open("/dev/null")
 }
 
 func (f fake) Status() map[string]bool {

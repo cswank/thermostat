@@ -26,33 +26,59 @@ func New(p1, p2 gpio.Waiter, f func(i int)) Dial {
 }
 
 func (d Dial) Start() {
-	ch1 := make(chan int)
-	ch2 := make(chan int)
+	ch1 := make(chan uint8)
+	ch2 := make(chan uint8)
 
 	go wait(d.a, ch1)
 	go wait(d.b, ch2)
+	var q queue
 
 	var stop bool
-	var i int
 	for !stop {
 		select {
-		case v1 := <-ch1:
-			var v2 int
-			if d.b.Status()["gpio"] {
-				v2 = 1
+		case a := <-ch1:
+			v := uint16(1)
+			if a == 1 {
+				v = 3
 			}
-			fmt.Printf("v1: %d%d\n", v1, v2)
-		case v2 := <-ch2:
-			var v1 int
-			if d.a.Status()["gpio"] {
-				v1 = 1
+			if i := q.add(v); i != 0 {
+				d.f(i)
 			}
-			fmt.Printf("v2: %d%d\n", v1, v2)
+		case b := <-ch2:
+			v := uint16(2)
+			if b == 1 {
+				v = 4
+			}
+			if i := q.add(v); i != 0 {
+				d.f(i)
+			}
 		case <-d.close:
 			stop = true
 		}
-		d.f(i)
 	}
+}
+
+var (
+	// 1, 2, 3, 4
+	left = uint16(0b001010011100)
+	// 2, 1, 4, 3
+	right = uint16(0b010001100011)
+)
+
+type queue uint16
+
+func (q *queue) add(i uint16) int {
+	v := uint16(*q)
+	v = v<<3 | i
+	*q = queue(v)
+	fmt.Printf("  %03b  %012b\n", i, v&0b111111111111)
+	if v&0b111111111111 == left {
+		return -1
+	}
+	if v&0b111111111111 == right {
+		return 1
+	}
+	return 0
 }
 
 func (d Dial) Close() {
@@ -61,15 +87,23 @@ func (d Dial) Close() {
 	}()
 }
 
-func wait(p gpio.Waiter, ch chan int) {
+func wait(p gpio.Waiter, ch chan uint8) {
+	f, err := p.Open()
+	buf := make([]byte, 2)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var v uint8
 	for {
 		if err := p.Wait(); err != nil {
 			log.Println("unable to wait for gpio pin")
 		}
-		var i int
-		if p.Status()["gpio"] {
-			i = 1
+		f.Seek(0, 0)
+		f.Read(buf)
+		v = 0
+		if string(buf) == "1\n" {
+			v = 1
 		}
-		ch <- i
+		ch <- v
 	}
 }

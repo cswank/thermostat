@@ -89,7 +89,7 @@ func (u *UI) input() {
 	for {
 		select {
 		case i := <-u.ti:
-			u.led.Print(fmt.Sprintf("%02d", i))
+			u.led.Print(fmt.Sprintf("%d", i))
 			tk = time.After(2 * time.Second)
 		case s := <-u.bi:
 			u.led.Print(s.String())
