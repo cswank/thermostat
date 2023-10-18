@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/cswank/gogadgets"
@@ -11,40 +12,48 @@ import (
 )
 
 type (
+	printer interface {
+		Print(tt, at int, state string)
+	}
+
 	UI struct {
 		dial        dial.Dial
 		btn         button.Button
-		led         gpio.Printer
+		display     printer
 		out         chan<- gogadgets.Message
 		ti          chan int
 		bi          chan button.State
 		debug       bool
+		state       button.State
+		furnace     string
 		temperature struct {
-			set    int
+			target int
 			actual int
 		}
 	}
 )
 
-func New(btn, A, B gpio.Waiter, led gpio.Printer, debug bool) UI {
+func New(btn, A, B gpio.Waiter, p printer, furnaceAddress string, debug bool) *UI {
 	ti := make(chan int)
 	bi := make(chan button.State)
 	u := UI{
-		ti:    ti,
-		bi:    bi,
-		dial:  dial.New(A, B, temperatureInput(ti)),
-		btn:   button.New(btn, buttonInput(bi)),
-		led:   led,
-		debug: debug,
+		ti:      ti,
+		bi:      bi,
+		dial:    dial.New(A, B, temperatureInput(ti)),
+		btn:     button.New(btn, buttonInput(bi)),
+		display: p,
+		furnace: furnaceAddress,
+		debug:   debug,
 	}
 
 	go u.dial.Start()
 	go u.btn.Start()
 	go u.input()
-	return u
+	return &u
 }
 
 func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message) {
+	fmt.Println(&out)
 	u.out = out
 	for msg := range input {
 		if msg.Type != "update" {
@@ -53,29 +62,35 @@ func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message)
 
 		switch msg.Sender {
 		case "home temperature":
+			fmt.Println("cmd", msg.Value)
 			v, ok := msg.Value.ToFloat()
 			if ok {
-				u.temperature.actual = int(v)
-				if u.debug {
-					u.ti <- int(v)
+				i := int(math.Round(v))
+				if i != u.temperature.actual {
+					u.display.Print(u.temperature.target, i, u.state.String())
 				}
+				u.temperature.actual = int(v)
 			}
 		case "home furnace":
 			if msg.TargetValue == nil {
 				continue
 			}
 
+			fmt.Println("cmd", msg.Value.Cmd)
 			switch msg.Value.Cmd {
 			case "turn off furnace":
-				u.bi <- button.Off
+				u.state = button.State(button.Off)
+				u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
 			case "heat home":
-				u.bi <- button.Heat
+				u.state = button.State(button.Heat)
 				f, _ := msg.TargetValue.ToFloat()
-				u.temperature.set = int(f)
+				u.temperature.target = int(math.Round(f))
+				u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
 			case "cool home":
-				u.bi <- button.Cool
+				u.state = button.State(button.Cool)
 				f, _ := msg.TargetValue.ToFloat()
-				u.temperature.set = int(f)
+				u.temperature.target = int(math.Round(f))
+				u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
 			}
 		}
 	}
@@ -86,17 +101,52 @@ func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message)
 
 func (u *UI) input() {
 	var tk <-chan time.Time
+	presses := int(-1)
+	//TODO:  set this at startup
+	u.temperature.target = 70
 	for {
 		select {
 		case i := <-u.ti:
-			u.led.Print(fmt.Sprintf("%d", i))
-			tk = time.After(2 * time.Second)
-		case s := <-u.bi:
-			u.led.Print(s.String())
+			if u.state != button.Off {
+				u.temperature.target += i
+				u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
+				tk = time.After(2 * time.Second)
+				presses = 2
+			}
+		case <-u.bi:
+			if presses > -1 {
+				u.state.Next()
+			}
+			presses++
+			u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
 			tk = time.After(2 * time.Second)
 		case <-tk:
-			u.led.Off()
+			if presses > 0 {
+				u.command()
+			}
+			presses = -1
 		}
+	}
+}
+
+func (u *UI) command() {
+	var cmd string
+	switch u.state {
+	case button.Cool:
+		cmd = fmt.Sprintf("cool home to %d F", u.temperature.target)
+	case button.Heat:
+		cmd = fmt.Sprintf("heat home to %d F", u.temperature.target)
+	case button.Off:
+		cmd = "turn off furnace"
+	}
+
+	fmt.Printf("%s\n", cmd)
+	u.out <- gogadgets.Message{
+		UUID:   gogadgets.GetUUID(),
+		Type:   gogadgets.COMMAND,
+		Sender: "thermostat",
+		Host:   u.furnace,
+		Body:   cmd,
 	}
 }
 
@@ -106,9 +156,9 @@ func temperatureInput(ch chan int) func(i int) {
 	}
 }
 
-func buttonInput(ch chan button.State) func(b button.State) {
-	return func(b button.State) {
-		ch <- b
+func buttonInput(ch chan button.State) func() {
+	return func() {
+		ch <- 1
 	}
 }
 

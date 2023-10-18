@@ -2,6 +2,7 @@ package button
 
 import (
 	"log"
+	"time"
 
 	"github.com/cswank/thermostat/internal/gpio"
 )
@@ -11,7 +12,7 @@ type (
 
 	Button struct {
 		gpio  gpio.Waiter
-		f     func(s State)
+		f     func()
 		close chan bool
 	}
 )
@@ -22,7 +23,7 @@ const (
 	Cool State = 2
 )
 
-func New(g gpio.Waiter, f func(State)) Button {
+func New(g gpio.Waiter, f func()) Button {
 	return Button{
 		gpio:  g,
 		f:     f,
@@ -34,13 +35,11 @@ func (b Button) Start() {
 	ch := make(chan struct{})
 	go wait(b.gpio, ch)
 
-	var st State
 	var stop bool
 	for !stop {
 		select {
 		case <-ch:
-			st = st.next()
-			b.f(st)
+			b.f()
 		case <-b.close:
 			stop = true
 		}
@@ -59,24 +58,33 @@ func wait(p gpio.Waiter, ch chan struct{}) {
 			log.Println("unable to wait for gpio pin")
 		}
 		ch <- struct{}{}
+		time.Sleep(400 * time.Millisecond)
 	}
 }
 
-func (s State) next() State {
-	s += 1
-	if s > 2 {
-		s = 0
+func (s *State) Next() State {
+	*s += 1
+	if *s > 2 {
+		*s = 0
 	}
-	return s
+	return *s
+}
+
+func (s *State) Prev() State {
+	*s -= 1
+	if *s < 0 {
+		*s = 2
+	}
+	return *s
 }
 
 func (s State) String() string {
 	switch s {
 	case Cool:
-		return "CL"
+		return "Cool"
 	case Heat:
-		return "HE"
+		return "Heat"
 	default:
-		return "OF"
+		return "Off"
 	}
 }

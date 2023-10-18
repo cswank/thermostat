@@ -4,7 +4,12 @@ go 1.20
 
 require (
 	github.com/cswank/gogadgets v0.0.0-20220925122757-7e390b246ebd
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/tinygo-org/tinygo v0.30.0
+	golang.org/x/image v0.1.0
+	periph.io/x/conn/v3 v3.7.0
+	periph.io/x/devices/v3 v3.7.1
+	periph.io/x/host/v3 v3.8.2
 	tinygo.org/x/drivers v0.26.0
 )
 

@@ -58,6 +58,17 @@ func (d Dial) Start() {
 	}
 }
 
+/*
+* a     1   2   3   4
+* ------|       |-------------------
+*       |       |
+*       |-------|
+* b
+* ----------|       |-------------------
+*           |       |
+*           |-------|
+ */
+
 var (
 	// 1, 2, 3, 4
 	left = uint16(0b001010011100)
@@ -73,10 +84,10 @@ func (q *queue) add(i uint16) int {
 	*q = queue(v)
 	fmt.Printf("  %03b  %012b\n", i, v&0b111111111111)
 	if v&0b111111111111 == left {
-		return -1
+		return 1
 	}
 	if v&0b111111111111 == right {
-		return 1
+		return -1
 	}
 	return 0
 }
