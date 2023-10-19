@@ -53,8 +53,19 @@ func New(btn, A, B gpio.Waiter, p printer, furnaceAddress string, debug bool) *U
 }
 
 func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message) {
-	fmt.Println(&out)
 	u.out = out
+
+	go func() {
+		time.Sleep(time.Second)
+		out <- gogadgets.Message{
+			UUID:   gogadgets.GetUUID(),
+			Type:   gogadgets.COMMAND,
+			Sender: "thermostat",
+			Host:   u.furnace,
+			Body:   "update",
+		}
+	}()
+
 	for msg := range input {
 		if msg.Type != "update" {
 			continue
@@ -62,7 +73,6 @@ func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message)
 
 		switch msg.Sender {
 		case "home temperature":
-			fmt.Println("cmd", msg.Value)
 			v, ok := msg.Value.ToFloat()
 			if ok {
 				i := int(math.Round(v))
@@ -72,24 +82,45 @@ func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message)
 				u.temperature.actual = int(v)
 			}
 		case "home furnace":
-			if msg.TargetValue == nil {
-				continue
+			if msg.TargetValue != nil {
+				fmt.Printf("%+v\n", *msg.TargetValue)
 			}
-
-			fmt.Println("cmd", msg.Value.Cmd)
-			switch msg.Value.Cmd {
-			case "turn off furnace":
-				u.state = button.State(button.Off)
-				u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
-			case "heat home":
-				u.state = button.State(button.Heat)
-				f, _ := msg.TargetValue.ToFloat()
-				u.temperature.target = int(math.Round(f))
-				u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
-			case "cool home":
-				u.state = button.State(button.Cool)
-				f, _ := msg.TargetValue.ToFloat()
-				u.temperature.target = int(math.Round(f))
+			if msg.Value.Cmd != "" {
+				switch msg.Value.Cmd {
+				case "turn off furnace":
+					u.state = button.State(button.Off)
+					u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
+				case "heat home":
+					u.state = button.State(button.Heat)
+					if msg.TargetValue != nil {
+						f, _ := msg.TargetValue.ToFloat()
+						u.temperature.target = int(math.Round(f))
+					}
+					u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
+				case "cool home":
+					u.state = button.State(button.Cool)
+					if msg.TargetValue != nil {
+						f, _ := msg.TargetValue.ToFloat()
+						u.temperature.target = int(math.Round(f))
+					}
+					u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
+				}
+			} else {
+				if msg.Value.Output["cool"] {
+					u.state = button.State(button.Cool)
+				} else if msg.Value.Output["heat"] {
+					u.state = button.State(button.Heat)
+					if msg.TargetValue != nil {
+						f, _ := msg.TargetValue.ToFloat()
+						u.temperature.target = int(math.Round(f))
+					}
+				} else {
+					u.state = button.State(button.Off)
+					if msg.TargetValue != nil {
+						f, _ := msg.TargetValue.ToFloat()
+						u.temperature.target = int(math.Round(f))
+					}
+				}
 				u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
 			}
 		}

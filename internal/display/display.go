@@ -15,6 +15,7 @@ import (
 	"periph.io/x/host/v3"
 
 	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/font/gofont/goregular"
 	"golang.org/x/image/math/fixed"
 )
@@ -53,7 +54,6 @@ func (o *OLED) Close() {
 func (o *OLED) Print(tt, at int, state string) {
 	o.lock.Lock()
 	img := image1bit.NewVerticalLSB(o.dev.Bounds())
-	//f := basicfont.Face7x13
 
 	fontTTF, _ := truetype.Parse(goregular.TTF)
 	face := truetype.NewFace(fontTTF, &truetype.Options{
@@ -61,28 +61,39 @@ func (o *OLED) Print(tt, at int, state string) {
 		DPI:  72,
 	})
 
+	smallFace := basicfont.Face7x13
+
 	//y := img.Bounds().Dy() - 1 - f.Descent
 	temperature := font.Drawer{
 		Dst:  img,
 		Src:  &image.Uniform{image1bit.On},
 		Face: face,
-		Dot:  fixed.P(0, 28),
+		Dot:  fixed.P(0, 24),
+	}
+
+	legend := font.Drawer{
+		Dst:  img,
+		Src:  &image.Uniform{image1bit.On},
+		Face: smallFace,
+		Dot:  fixed.P(0, 34),
 	}
 
 	st := font.Drawer{
 		Dst:  img,
 		Src:  &image.Uniform{image1bit.On},
 		Face: face,
-		Dot:  fixed.P(0, 56),
+		Dot:  fixed.P(0, 60),
 	}
 
 	if state == "Off" {
-		temperature.DrawString(fmt.Sprintf("-- / %02d", at))
+		temperature.DrawString(fmt.Sprintf("--         %02d", at))
 	} else {
-		temperature.DrawString(fmt.Sprintf("%02d / %02d", tt, at))
+		temperature.DrawString(fmt.Sprintf("%02d         %02d", tt, at))
 	}
 
-	st.DrawString(state)
+	legend.DrawString("target     actual")
+
+	st.DrawString(fmt.Sprintf("      %s", state))
 	if err := o.dev.Draw(o.dev.Bounds(), img, image.Point{}); err != nil {
 		log.Fatal(err)
 	}
