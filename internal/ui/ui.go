@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 type (
 	printer interface {
 		Print(tt, at int, state string)
+		Clear()
+		Message(s string)
 	}
 
 	UI struct {
@@ -36,7 +39,7 @@ type (
 func New(btn, A, B gpio.Waiter, p printer, furnaceAddress string, debug bool) *UI {
 	ti := make(chan int)
 	bi := make(chan button.State)
-	u := UI{
+	return &UI{
 		ti:      ti,
 		bi:      bi,
 		dial:    dial.New(A, B, temperatureInput(ti)),
@@ -45,14 +48,13 @@ func New(btn, A, B gpio.Waiter, p printer, furnaceAddress string, debug bool) *U
 		furnace: furnaceAddress,
 		debug:   debug,
 	}
-
-	go u.dial.Start()
-	go u.btn.Start()
-	go u.input()
-	return &u
 }
 
 func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message) {
+	go u.dial.Start()
+	go u.btn.Start()
+	go u.input()
+
 	u.out = out
 
 	go func() {
@@ -66,82 +68,89 @@ func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message)
 		}
 	}()
 
-	for msg := range input {
-		if msg.Type != "update" {
-			continue
-		}
+	reconnect := time.After(10 * time.Minute)
 
-		switch msg.Sender {
-		case "home temperature":
-			v, ok := msg.Value.ToFloat()
-			if ok {
-				i := int(math.Round(v))
-				if i != u.temperature.actual {
-					u.display.Print(u.temperature.target, i, u.state.String())
-				}
-				u.temperature.actual = int(v)
-			}
-		case "home furnace":
-			if msg.TargetValue != nil {
-				fmt.Printf("%+v\n", *msg.TargetValue)
-			}
-			if msg.Value.Cmd != "" {
-				switch msg.Value.Cmd {
-				case "turn off furnace":
-					u.state = button.State(button.Off)
-					u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
-				case "heat home":
-					u.state = button.State(button.Heat)
-					if msg.TargetValue != nil {
-						f, _ := msg.TargetValue.ToFloat()
-						u.temperature.target = int(math.Round(f))
-					}
-					u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
-				case "cool home":
-					u.state = button.State(button.Cool)
-					if msg.TargetValue != nil {
-						f, _ := msg.TargetValue.ToFloat()
-						u.temperature.target = int(math.Round(f))
-					}
-					u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
-				}
-			} else {
-				if msg.Value.Output["cool"] {
-					u.state = button.State(button.Cool)
-				} else if msg.Value.Output["heat"] {
-					u.state = button.State(button.Heat)
-					if msg.TargetValue != nil {
-						f, _ := msg.TargetValue.ToFloat()
-						u.temperature.target = int(math.Round(f))
-					}
-				} else {
-					u.state = button.State(button.Off)
-					if msg.TargetValue != nil {
-						f, _ := msg.TargetValue.ToFloat()
-						u.temperature.target = int(math.Round(f))
-					}
-				}
-				u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
-			}
+	var stop bool
+	for !stop {
+		select {
+		case msg := <-input:
+			u.handleUpdate(msg)
+			reconnect = time.After(15 * time.Minute)
+		case <-reconnect:
+			log.Println("reconnect")
+			stop = true
 		}
 	}
 
 	u.btn.Close()
 	u.dial.Close()
+	log.Println("exit")
+}
+
+func (u *UI) handleUpdate(msg gogadgets.Message) {
+	if msg.Type != "update" {
+		return
+	}
+
+	switch msg.Sender {
+	case "home temperature":
+		v, ok := msg.Value.ToFloat()
+		if ok {
+			i := int(math.Round(v))
+			u.temperature.actual = int(i)
+		}
+	case "home furnace":
+		if msg.Value.Cmd != "" {
+			switch msg.Value.Cmd {
+			case "turn off furnace":
+				u.state = button.State(button.Off)
+			case "heat home":
+				u.state = button.State(button.Heat)
+				if msg.TargetValue != nil {
+					f, _ := msg.TargetValue.ToFloat()
+					u.temperature.target = int(math.Round(f))
+				}
+			case "cool home":
+				u.state = button.State(button.Cool)
+				if msg.TargetValue != nil {
+					f, _ := msg.TargetValue.ToFloat()
+					u.temperature.target = int(math.Round(f))
+				}
+			}
+		} else {
+			if msg.Value.Output["cool"] {
+				u.state = button.State(button.Cool)
+			} else if msg.Value.Output["heat"] {
+				u.state = button.State(button.Heat)
+				if msg.TargetValue != nil {
+					f, _ := msg.TargetValue.ToFloat()
+					u.temperature.target = int(math.Round(f))
+				}
+			} else {
+				u.state = button.State(button.Off)
+				if msg.TargetValue != nil {
+					f, _ := msg.TargetValue.ToFloat()
+					u.temperature.target = int(math.Round(f))
+				}
+			}
+		}
+	}
 }
 
 func (u *UI) input() {
-	var tk <-chan time.Time
+	var cmd <-chan time.Time
 	presses := int(-1)
-	//TODO:  set this at startup
 	u.temperature.target = 70
+	bye := true
+	u.display.Message("hi")
+	off := time.After(1 * time.Second)
 	for {
 		select {
 		case i := <-u.ti:
 			if u.state != button.Off {
 				u.temperature.target += i
 				u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
-				tk = time.After(2 * time.Second)
+				cmd = time.After(2 * time.Second)
 				presses = 2
 			}
 		case <-u.bi:
@@ -150,12 +159,22 @@ func (u *UI) input() {
 			}
 			presses++
 			u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
-			tk = time.After(2 * time.Second)
-		case <-tk:
+			cmd = time.After(2 * time.Second)
+		case <-cmd:
 			if presses > 0 {
 				u.command()
 			}
 			presses = -1
+			off = time.After(5 * time.Second)
+		case <-off:
+			if !bye {
+				bye = true
+				u.display.Message("bye")
+				off = time.After(1 * time.Second)
+			} else {
+				bye = false
+				u.display.Clear()
+			}
 		}
 	}
 }

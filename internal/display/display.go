@@ -51,8 +51,13 @@ func (o *OLED) Close() {
 	o.bc.Close()
 }
 
+func (o *OLED) Clear() {
+	o.dev.Halt()
+}
+
 func (o *OLED) Print(tt, at int, state string) {
 	o.lock.Lock()
+
 	img := image1bit.NewVerticalLSB(o.dev.Bounds())
 
 	fontTTF, _ := truetype.Parse(goregular.TTF)
@@ -97,5 +102,26 @@ func (o *OLED) Print(tt, at int, state string) {
 	if err := o.dev.Draw(o.dev.Bounds(), img, image.Point{}); err != nil {
 		log.Fatal(err)
 	}
+	o.lock.Unlock()
+}
+
+func (o *OLED) Message(msg string) {
+	o.lock.Lock()
+
+	img := image1bit.NewVerticalLSB(o.dev.Bounds())
+	smallFace := basicfont.Face7x13
+
+	legend := font.Drawer{
+		Dst:  img,
+		Src:  &image.Uniform{image1bit.On},
+		Face: smallFace,
+		Dot:  fixed.P(0, 34),
+	}
+
+	legend.DrawString(fmt.Sprintf("       %s", msg))
+	if err := o.dev.Draw(o.dev.Bounds(), img, image.Point{}); err != nil {
+		log.Fatal(err)
+	}
+
 	o.lock.Unlock()
 }

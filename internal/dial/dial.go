@@ -1,7 +1,6 @@
 package dial
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/cswank/thermostat/internal/gpio"
@@ -82,7 +81,7 @@ func (q *queue) add(i uint16) int {
 	v := uint16(*q)
 	v = v<<3 | i
 	*q = queue(v)
-	fmt.Printf("  %03b  %012b\n", i, v&0b111111111111)
+	//fmt.Printf("  %03b  %012b\n", i, v&0b111111111111)
 	if v&0b111111111111 == left {
 		return 1
 	}

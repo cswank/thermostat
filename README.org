@@ -8,6 +8,8 @@ https://github.com/davecheney/gpio/blob/master/gpio_linux.go
 ** Hardware Debounce
 https://raspberrypi.stackexchange.com/questions/118349/what-is-the-proper-way-to-debounce-a-gpio-input
 https://www.digikey.com/en/articles/how-to-implement-hardware-debounce-for-switches-and-relays
+** OLED
+
 ** LED
 http://www.xlitx.com/datasheet/5621AH.pdf
 http://www.xlitx.com/Products/7-segment-led-dot-matrix/5621ah.html
