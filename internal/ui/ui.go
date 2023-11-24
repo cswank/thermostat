@@ -37,6 +37,7 @@ type (
 )
 
 func New(btn, A, B gpio.Waiter, p printer, furnaceAddress string, debug bool) *UI {
+	log.Println(furnaceAddress)
 	ti := make(chan int)
 	bi := make(chan button.State)
 	return &UI{
@@ -58,7 +59,7 @@ func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message)
 	u.out = out
 
 	go func() {
-		time.Sleep(time.Second)
+		time.Sleep(1 * time.Second)
 		out <- gogadgets.Message{
 			UUID:   gogadgets.GetUUID(),
 			Type:   gogadgets.COMMAND,
@@ -68,23 +69,24 @@ func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message)
 		}
 	}()
 
-	reconnect := time.After(10 * time.Minute)
+	reconnect := time.NewTicker(15 * time.Minute)
 
 	var stop bool
+	var lastUpdate time.Time
 	for !stop {
 		select {
 		case msg := <-input:
 			u.handleUpdate(msg)
-			reconnect = time.After(15 * time.Minute)
-		case <-reconnect:
-			log.Println("reconnect")
-			stop = true
+			lastUpdate = time.Now()
+		case <-reconnect.C:
+			if time.Now().Sub(lastUpdate) > (15 * time.Minute) {
+				go u.reconnect(out)
+			}
 		}
 	}
 
 	u.btn.Close()
 	u.dial.Close()
-	log.Println("exit")
 }
 
 func (u *UI) handleUpdate(msg gogadgets.Message) {
@@ -137,8 +139,26 @@ func (u *UI) handleUpdate(msg gogadgets.Message) {
 	}
 }
 
+func (u *UI) reconnect(out chan<- gogadgets.Message) {
+	log.Println("reconnect")
+	out <- gogadgets.Message{
+		UUID:   gogadgets.GetUUID(),
+		Type:   gogadgets.COMMAND,
+		Sender: "thermostat",
+		Body:   "reconnect",
+	}
+	out <- gogadgets.Message{
+		UUID:   gogadgets.GetUUID(),
+		Type:   gogadgets.COMMAND,
+		Sender: "thermostat",
+		Host:   u.furnace,
+		Body:   "update",
+	}
+	log.Println("reconnected")
+}
+
 func (u *UI) input() {
-	var cmd <-chan time.Time
+	var cmd *time.Timer
 	presses := int(-1)
 	u.temperature.target = 70
 	bye := true
@@ -150,6 +170,9 @@ func (u *UI) input() {
 			if u.state != button.Off {
 				u.temperature.target += i
 				u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
+				if !cmd.Stop() {
+
+				}
 				cmd = time.After(2 * time.Second)
 				presses = 2
 			}
@@ -160,7 +183,7 @@ func (u *UI) input() {
 			presses++
 			u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
 			cmd = time.After(2 * time.Second)
-		case <-cmd:
+		case <-cmd.C:
 			if presses > 0 {
 				u.command()
 			}

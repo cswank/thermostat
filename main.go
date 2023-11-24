@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"log"
 
 	"github.com/cswank/thermostat/internal/app"
 )
@@ -13,4 +14,5 @@ var (
 func main() {
 	flag.Parse()
 	app.Start(*debug)
+	log.Println("exit")
 }
