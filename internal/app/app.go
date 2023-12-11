@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/cswank/gogadgets"
 	"github.com/cswank/thermostat/internal/display"
@@ -14,6 +15,18 @@ var cfg = gogadgets.Config{
 	Master: getenv("GOGADGETS_MASTER", "http://192.168.88.234:6111"),
 	Host:   getenv("GOGADGETS_HOST", "http://192.168.88.64:6114"),
 	Port:   6114,
+	Gadgets: []gogadgets.GadgetConfig{
+		{
+			Name:     "temperature-2",
+			Location: "home",
+			Pin: gogadgets.Pin{
+				Type:      "thermometer",
+				OneWireId: "28-0000052243a9",
+				Units:     "F",
+				Sleep:     15 * time.Second,
+			},
+		},
+	},
 }
 
 func Start(debug bool) {

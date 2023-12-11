@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/cswank/gogadgets"
@@ -96,47 +97,33 @@ func (u *UI) handleUpdate(msg gogadgets.Message) {
 
 	switch msg.Sender {
 	case "home temperature":
-		v, ok := msg.Value.ToFloat()
-		if ok {
-			i := int(math.Round(v))
-			u.temperature.actual = int(i)
-		}
+		u.updateActual(msg.Value)
 	case "home furnace":
-		if msg.Value.Cmd != "" {
-			switch msg.Value.Cmd {
-			case "turn off furnace":
-				u.state = button.State(button.Off)
+		if msg.TargetValue != nil {
+			switch firstTwoWords(msg.TargetValue.Cmd) {
 			case "heat home":
-				u.state = button.State(button.Heat)
-				if msg.TargetValue != nil {
-					f, _ := msg.TargetValue.ToFloat()
-					u.temperature.target = int(math.Round(f))
-				}
+				u.updateState(msg.TargetValue, button.Heat)
 			case "cool home":
-				u.state = button.State(button.Cool)
-				if msg.TargetValue != nil {
-					f, _ := msg.TargetValue.ToFloat()
-					u.temperature.target = int(math.Round(f))
-				}
+				u.updateState(msg.TargetValue, button.Cool)
 			}
 		} else {
-			if msg.Value.Output["cool"] {
-				u.state = button.State(button.Cool)
-			} else if msg.Value.Output["heat"] {
-				u.state = button.State(button.Heat)
-				if msg.TargetValue != nil {
-					f, _ := msg.TargetValue.ToFloat()
-					u.temperature.target = int(math.Round(f))
-				}
-			} else {
-				u.state = button.State(button.Off)
-				if msg.TargetValue != nil {
-					f, _ := msg.TargetValue.ToFloat()
-					u.temperature.target = int(math.Round(f))
-				}
-			}
+			u.state = button.State(button.Off)
 		}
 	}
+}
+
+func (u *UI) updateActual(val gogadgets.Value) {
+	v, ok := val.ToFloat()
+	if ok {
+		i := int(math.Round(v))
+		u.temperature.actual = int(i)
+	}
+}
+
+func (u *UI) updateState(v *gogadgets.Value, st button.State) {
+	u.state = button.State(st)
+	f, _ := v.ToFloat()
+	u.temperature.target = int(math.Round(f))
 }
 
 func (u *UI) reconnect(out chan<- gogadgets.Message) {
@@ -144,6 +131,7 @@ func (u *UI) reconnect(out chan<- gogadgets.Message) {
 	out <- gogadgets.Message{
 		UUID:   gogadgets.GetUUID(),
 		Type:   gogadgets.COMMAND,
+		Host:   u.furnace,
 		Sender: "thermostat",
 		Body:   "reconnect",
 	}
@@ -158,22 +146,18 @@ func (u *UI) reconnect(out chan<- gogadgets.Message) {
 }
 
 func (u *UI) input() {
-	var cmd *time.Timer
 	presses := int(-1)
-	u.temperature.target = 70
 	bye := true
 	u.display.Message("hi")
-	off := time.After(1 * time.Second)
+	off := newTimer(1 * time.Second)
+	cmd := newTimer(-1)
 	for {
 		select {
 		case i := <-u.ti:
 			if u.state != button.Off {
 				u.temperature.target += i
 				u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
-				if !cmd.Stop() {
-
-				}
-				cmd = time.After(2 * time.Second)
+				cmd.reset(3)
 				presses = 2
 			}
 		case <-u.bi:
@@ -182,18 +166,20 @@ func (u *UI) input() {
 			}
 			presses++
 			u.display.Print(u.temperature.target, u.temperature.actual, u.state.String())
-			cmd = time.After(2 * time.Second)
-		case <-cmd.C:
+			cmd.reset(3)
+		case <-cmd.t.C:
+			cmd.recv = true
 			if presses > 0 {
 				u.command()
 			}
 			presses = -1
-			off = time.After(5 * time.Second)
-		case <-off:
+			off.reset(5)
+		case <-off.t.C:
+			off.recv = true
 			if !bye {
 				bye = true
 				u.display.Message("bye")
-				off = time.After(1 * time.Second)
+				off.reset(1)
 			} else {
 				bye = false
 				u.display.Clear()
@@ -223,6 +209,14 @@ func (u *UI) command() {
 	}
 }
 
+func (u UI) GetUID() string {
+	return "ui"
+}
+
+func (u UI) GetDirection() string {
+	return "input"
+}
+
 func temperatureInput(ch chan int) func(i int) {
 	return func(i int) {
 		ch <- i
@@ -235,10 +229,28 @@ func buttonInput(ch chan button.State) func() {
 	}
 }
 
-func (u UI) GetUID() string {
-	return "ui"
+func firstTwoWords(s string) string {
+	p := strings.Split(s, " ")
+	if len(p) < 2 {
+		return ""
+	}
+	return fmt.Sprintf("%s %s", p[0], p[1])
 }
 
-func (u UI) GetDirection() string {
-	return "input"
+type timer struct {
+	t    *time.Timer
+	recv bool
+}
+
+func newTimer(seconds time.Duration) *timer {
+	return &timer{t: time.NewTimer(seconds * time.Second)}
+}
+
+func (t *timer) reset(seconds time.Duration) {
+	if !t.t.Stop() {
+		if !t.recv {
+			<-t.t.C
+		}
+	}
+	t.t.Reset(seconds * time.Second)
 }
