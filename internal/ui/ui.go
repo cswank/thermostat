@@ -59,19 +59,6 @@ func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message)
 
 	u.out = out
 
-	go func() {
-		time.Sleep(1 * time.Second)
-		out <- gogadgets.Message{
-			UUID:   gogadgets.GetUUID(),
-			Type:   gogadgets.COMMAND,
-			Sender: "thermostat",
-			Host:   u.furnace,
-			Body:   "update",
-		}
-	}()
-
-	reconnect := time.NewTicker(15 * time.Minute)
-
 	var stop bool
 	var lastUpdate time.Time
 	for !stop {
@@ -79,10 +66,6 @@ func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message)
 		case msg := <-input:
 			u.handleUpdate(msg)
 			lastUpdate = time.Now()
-		case <-reconnect.C:
-			if time.Now().Sub(lastUpdate) > (15 * time.Minute) {
-				go u.reconnect(out)
-			}
 		}
 	}
 

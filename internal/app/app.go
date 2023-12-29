@@ -12,18 +12,42 @@ import (
 )
 
 var cfg = gogadgets.Config{
-	Master: getenv("GOGADGETS_MASTER", "http://192.168.88.234:6111"),
-	Host:   getenv("GOGADGETS_HOST", "http://192.168.88.64:6114"),
-	Port:   6114,
+	Host: getenv("GOGADGETS_HOST", "http://192.168.88.64:6114"),
+	Port: 6114,
 	Gadgets: []gogadgets.GadgetConfig{
 		{
-			Name:     "temperature-2",
+			Name:     "temperature",
 			Location: "home",
 			Pin: gogadgets.Pin{
 				Type:      "thermometer",
 				OneWireId: "28-0000052243a9",
 				Units:     "F",
 				Sleep:     15 * time.Second,
+			},
+		},
+		{
+			Location: "home",
+			Name:     "furnace",
+			Pin: gogadgets.Pin{
+				Type: "thermostat",
+				Pins: map[string]gogadgets.Pin{
+					"heat": {
+						Type:      "gpio",
+						Platform:  "rpi",
+						Pin:       "38",
+						Direction: "out",
+					},
+					"cool": {
+						Type:      "gpio",
+						Platform:  "rpi",
+						Pin:       "40",
+						Direction: "out",
+					},
+				},
+				Args: map[string]any{
+					"sensor":  "home temperature",
+					"timeout": "10m",
+				},
 			},
 		},
 	},
