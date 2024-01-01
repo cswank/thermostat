@@ -2,8 +2,8 @@ package ui
 
 import (
 	"fmt"
-	"log"
 	"math"
+	"net/http"
 	"strings"
 	"time"
 
@@ -38,7 +38,6 @@ type (
 )
 
 func New(btn, A, B gpio.Waiter, p printer, furnaceAddress string, debug bool) *UI {
-	log.Println(furnaceAddress)
 	ti := make(chan int)
 	bi := make(chan button.State)
 	return &UI{
@@ -57,15 +56,14 @@ func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message)
 	go u.btn.Start()
 	go u.input()
 
+	u.temperature.target = 70
 	u.out = out
 
 	var stop bool
-	var lastUpdate time.Time
 	for !stop {
 		select {
 		case msg := <-input:
 			u.handleUpdate(msg)
-			lastUpdate = time.Now()
 		}
 	}
 
@@ -107,25 +105,6 @@ func (u *UI) updateState(v *gogadgets.Value, st button.State) {
 	u.state = button.State(st)
 	f, _ := v.ToFloat()
 	u.temperature.target = int(math.Round(f))
-}
-
-func (u *UI) reconnect(out chan<- gogadgets.Message) {
-	log.Println("reconnect")
-	out <- gogadgets.Message{
-		UUID:   gogadgets.GetUUID(),
-		Type:   gogadgets.COMMAND,
-		Host:   u.furnace,
-		Sender: "thermostat",
-		Body:   "reconnect",
-	}
-	out <- gogadgets.Message{
-		UUID:   gogadgets.GetUUID(),
-		Type:   gogadgets.COMMAND,
-		Sender: "thermostat",
-		Host:   u.furnace,
-		Body:   "update",
-	}
-	log.Println("reconnected")
 }
 
 func (u *UI) input() {
@@ -182,7 +161,6 @@ func (u *UI) command() {
 		cmd = "turn off furnace"
 	}
 
-	fmt.Printf("%s\n", cmd)
 	u.out <- gogadgets.Message{
 		UUID:   gogadgets.GetUUID(),
 		Type:   gogadgets.COMMAND,
@@ -198,6 +176,18 @@ func (u UI) GetUID() string {
 
 func (u UI) GetDirection() string {
 	return "input"
+}
+
+func (u *UI) Handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "hello, world!")
+}
+
+func (u *UI) Verb() string {
+	return "GET"
+}
+
+func (u *UI) Path() string {
+	return "/"
 }
 
 func temperatureInput(ch chan int) func(i int) {
