@@ -21,7 +21,7 @@ var (
 				Location: "home",
 				Pin: gogadgets.Pin{
 					Type:      "thermometer",
-					OneWireId: "28-0000052243a9",
+					OneWireId: "28-00000522ec59",
 					Units:     "F",
 					Sleep:     15 * time.Second,
 				},
@@ -85,23 +85,23 @@ func Start(debug bool, season string) {
 		cfg.Gadgets[2].Args["jobs"] = winter
 	}
 
-	a, b, c, d := deps()
+	btn, dial1, dial2, d := deps()
 
-	u := ui.New(a, b, c, d, cfg.Master, debug)
+	u := ui.New(btn, dial1, dial2, d, cfg.Master, debug)
 	cfg.Endpoints = []gogadgets.HTTPHandler{u}
 	app := gogadgets.New(&cfg, u)
 	app.Start()
 }
 
 func deps() (*gogadgets.GPIO, *gogadgets.GPIO, *gogadgets.GPIO, *display.OLED) {
-	g1, g2, g3 := newGPIO(18, "falling"), newGPIO(15, "both"), newGPIO(16, "both")
+	btn, dial1, dial2 := newGPIO(15, "falling"), newGPIO(18, "both"), newGPIO(16, "both")
 
 	d, err := display.New()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return g1, g2, g3, d
+	return btn, dial1, dial2, d
 }
 
 func newGPIO(i int, dir string) *gogadgets.GPIO {

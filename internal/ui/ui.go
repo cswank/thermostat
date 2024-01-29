@@ -179,7 +179,11 @@ func (u UI) GetDirection() string {
 }
 
 func (u *UI) Handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "hello, world!")
+	fmt.Fprintf(w, fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<h3>Temperature: %d</h3>
+<h3>Target: %d</h3>
+</html>`, u.temperature.actual, u.temperature.target))
 }
 
 func (u *UI) Verb() string {
