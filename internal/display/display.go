@@ -108,17 +108,19 @@ func (o *OLED) Print(tt, at int, state string) {
 func (o *OLED) Message(msg string) {
 	o.lock.Lock()
 
+	fontTTF, _ := truetype.Parse(goregular.TTF)
 	img := image1bit.NewVerticalLSB(o.dev.Bounds())
-	smallFace := basicfont.Face7x13
 
 	legend := font.Drawer{
 		Dst:  img,
 		Src:  &image.Uniform{image1bit.On},
-		Face: smallFace,
+		Face: truetype.NewFace(fontTTF, &truetype.Options{Size: 16, DPI: 72}),
 		Dot:  fixed.P(0, 34),
 	}
 
-	legend.DrawString(fmt.Sprintf("       %s", msg))
+	w := 24
+
+	legend.DrawString(fmt.Sprintf(fmt.Sprintf("%%-%ds", w/2), fmt.Sprintf(fmt.Sprintf("%%%ds", w/2), msg)))
 	if err := o.dev.Draw(o.dev.Bounds(), img, image.Point{}); err != nil {
 		log.Fatal(err)
 	}

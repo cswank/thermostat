@@ -27,9 +27,11 @@ type (
 		out         chan<- gogadgets.Message
 		ti          chan int
 		bi          chan button.State
+		external    chan string
 		debug       bool
 		state       button.State
 		furnace     string
+		cmd         string
 		temperature struct {
 			target int
 			actual int
@@ -41,13 +43,14 @@ func New(btn, A, B gpio.Waiter, p printer, furnaceAddress string, debug bool) *U
 	ti := make(chan int)
 	bi := make(chan button.State)
 	return &UI{
-		ti:      ti,
-		bi:      bi,
-		dial:    dial.New(A, B, temperatureInput(ti)),
-		btn:     button.New(btn, buttonInput(bi)),
-		display: p,
-		furnace: furnaceAddress,
-		debug:   debug,
+		ti:       ti,
+		bi:       bi,
+		external: make(chan string),
+		dial:     dial.New(A, B, temperatureInput(ti)),
+		btn:      button.New(btn, buttonInput(bi)),
+		display:  p,
+		furnace:  furnaceAddress,
+		debug:    debug,
 	}
 }
 
@@ -89,6 +92,7 @@ func (u *UI) handleUpdate(msg gogadgets.Message) {
 			}
 		} else {
 			u.state = button.State(button.Off)
+			u.external <- "turn off furnace"
 		}
 	}
 }
@@ -105,11 +109,12 @@ func (u *UI) updateState(v *gogadgets.Value, st button.State) {
 	u.state = button.State(st)
 	f, _ := v.ToFloat()
 	u.temperature.target = int(math.Round(f))
+	u.external <- v.Cmd
 }
 
 func (u *UI) input() {
 	presses := int(-1)
-	bye := true
+	var bye int
 	u.display.Message("hi")
 	off := newTimer(1 * time.Second)
 	cmd := newTimer(-1)
@@ -136,14 +141,23 @@ func (u *UI) input() {
 			}
 			presses = -1
 			off.reset(5)
+		case cmd := <-u.external:
+			bye = 1
+			u.display.Message(cmd)
+			off.reset(2)
 		case <-off.t.C:
 			off.recv = true
-			if !bye {
-				bye = true
+			switch bye {
+			case 0:
+				bye = 1
+				u.display.Message(u.cmd)
+				off.reset(2)
+			case 1:
+				bye = 2
 				u.display.Message("bye")
 				off.reset(1)
-			} else {
-				bye = false
+			default:
+				bye = 0
 				u.display.Clear()
 			}
 		}
@@ -151,14 +165,13 @@ func (u *UI) input() {
 }
 
 func (u *UI) command() {
-	var cmd string
 	switch u.state {
 	case button.Cool:
-		cmd = fmt.Sprintf("cool home to %d F", u.temperature.target)
+		u.cmd = fmt.Sprintf("cool home to %d F", u.temperature.target)
 	case button.Heat:
-		cmd = fmt.Sprintf("heat home to %d F", u.temperature.target)
+		u.cmd = fmt.Sprintf("heat home to %d F", u.temperature.target)
 	case button.Off:
-		cmd = "turn off furnace"
+		u.cmd = "turn off furnace"
 	}
 
 	u.out <- gogadgets.Message{
@@ -166,7 +179,7 @@ func (u *UI) command() {
 		Type:   gogadgets.COMMAND,
 		Sender: "thermostat",
 		Host:   u.furnace,
-		Body:   cmd,
+		Body:   u.cmd,
 	}
 }
 

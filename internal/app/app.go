@@ -21,7 +21,7 @@ var (
 				Location: "home",
 				Pin: gogadgets.Pin{
 					Type:      "thermometer",
-					OneWireId: "28-00000522ec59",
+					OneWireId: "28-000000311ba0",
 					Units:     "F",
 					Sleep:     15 * time.Second,
 				},
@@ -94,7 +94,7 @@ func Start(debug bool, season string) {
 }
 
 func deps() (*gogadgets.GPIO, *gogadgets.GPIO, *gogadgets.GPIO, *display.OLED) {
-	btn, dial1, dial2 := newGPIO(15, "falling"), newGPIO(18, "both"), newGPIO(16, "both")
+	btn, dial1, dial2 := newGPIO(16, "falling"), newGPIO(15, "both"), newGPIO(18, "both")
 
 	d, err := display.New()
 	if err != nil {
