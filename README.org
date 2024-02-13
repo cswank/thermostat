@@ -9,24 +9,20 @@
 
 ** Notes and Parts
 *** Rotary Encoder
-https://www.sparkfun.com/products/9117
-
+digikey part number: 118-PEC11R-4320F-S0012-ND
+https://www.digikey.com/en/products/detail/bourns-inc/PEC11R-4320F-S0012/4699235?so=84473212&content=productdetail_US&mkt_tok=MDI4LVNYSy01MDcAAAGP7gCMSmK3S7iQMFn5oT0O7WjvWYwZCCJSnY_UqbFVAni8uOG82dcPK6wfp3T7Dy_SS-4I20sn1ZHBDY0ZDDaqZXyvshl6x9CQ6nFVvuls
 *** Epoll
 https://github.com/davecheney/gpio/blob/master/gpio_linux.go
 
 *** Hardware Debounce
 https://raspberrypi.stackexchange.com/questions/118349/what-is-the-proper-way-to-debounce-a-gpio-input
 https://www.digikey.com/en/articles/how-to-implement-hardware-debounce-for-switches-and-relays
-*** OLE
+*** OLED
 AZDelivery I2C 0.96-inch OLED Display • Compatible with Arduino SSD1306
 & Raspberry Pi • Set of 3 • 128x64 Pixels IIC 3.3V 5V White Character
 Screen Module
 https://www.amazon.com/gp/product/B074N9VLZX/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
-*** LED
-http://www.xlitx.com/datasheet/5621AH.pdf
-http://www.xlitx.com/Products/7-segment-led-dot-matrix/5621ah.html
-https://www.jameco.com/Jameco/workshop/TechTip/working-with-seven-segment-displays.html
-*** Arduino Example:
+*** Arduino Example
 Rotary encoder decoding using two interrupt lines.
 Most Arduino boards have two external interrupts,
 numbers 0 (on digital pin 2) and 1 (on digital pin 3).
