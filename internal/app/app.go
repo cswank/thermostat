@@ -21,7 +21,7 @@ var (
 				Location: "home",
 				Pin: gogadgets.Pin{
 					Type:      "thermometer",
-					OneWireId: "28-000000311ba0",
+					OneWireId: "28-0000003211a2",
 					Units:     "F",
 					Sleep:     15 * time.Second,
 				},
@@ -88,7 +88,7 @@ func Start(debug bool, season string) {
 	btn, dial1, dial2, d := deps()
 
 	u := ui.New(btn, dial1, dial2, d, cfg.Master, debug)
-	cfg.Endpoints = []gogadgets.HTTPHandler{u}
+	cfg.Endpoints = u.Handlers()
 	app := gogadgets.New(&cfg, u)
 	app.Start()
 }

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"strings"
@@ -144,18 +145,22 @@ func (u *UI) input() {
 		case cmd := <-u.external:
 			bye = 1
 			u.display.Message(cmd)
-			off.reset(2)
+			off.reset(4)
 		case <-off.t.C:
+			if presses > -1 {
+				continue
+			}
+
 			off.recv = true
 			switch bye {
 			case 0:
 				bye = 1
 				u.display.Message(u.cmd)
-				off.reset(2)
+				off.reset(4)
 			case 1:
 				bye = 2
 				u.display.Message("bye")
-				off.reset(1)
+				off.reset(2)
 			default:
 				bye = 0
 				u.display.Clear()
@@ -191,12 +196,23 @@ func (u UI) GetDirection() string {
 	return "input"
 }
 
-func (u *UI) Handler(w http.ResponseWriter, r *http.Request) {
+func (u *UI) Handlers() []gogadgets.HTTPHandler {
+	return []gogadgets.HTTPHandler{
+		&handler{verb: "GET", path: "/", handler: u.status},
+		&handler{verb: "POST", path: "/settings", handler: u.settings},
+	}
+}
+
+func (u *UI) status(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <h3>Temperature: %d</h3>
 <h3>Target: %d</h3>
 </html>`, u.temperature.actual, u.temperature.target))
+}
+
+func (u *UI) settings(w http.ResponseWriter, r *http.Request) {
+	log.Println("settings POST")
 }
 
 func (u *UI) Verb() string {
@@ -243,4 +259,22 @@ func (t *timer) reset(seconds time.Duration) {
 		}
 	}
 	t.t.Reset(seconds * time.Second)
+}
+
+type handler struct {
+	verb    string
+	path    string
+	handler func(w http.ResponseWriter, r *http.Request)
+}
+
+func (h handler) Verb() string {
+	return h.verb
+}
+
+func (h handler) Path() string {
+	return h.path
+}
+
+func (h handler) Handler(w http.ResponseWriter, r *http.Request) {
+	h.handler(w, r)
 }
