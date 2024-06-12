@@ -77,7 +77,7 @@ var (
 	}
 )
 
-func Start(debug bool, season string) {
+func Start(debug bool, season string, hysteresis float64) {
 	switch season {
 	case "summer":
 		cfg.Gadgets[2].Args["jobs"] = summer
@@ -86,6 +86,8 @@ func Start(debug bool, season string) {
 	}
 
 	btn, dial1, dial2, d := deps()
+
+	cfg.Gadgets[1].Pin.Args["hysteresis"] = hysteresis
 
 	u := ui.New(btn, dial1, dial2, d, cfg.Master, debug)
 	cfg.Endpoints = u.Handlers()
