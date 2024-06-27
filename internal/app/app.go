@@ -11,6 +11,12 @@ import (
 	"github.com/cswank/thermostat/internal/ui"
 )
 
+const (
+	stateBtn = 16
+	plusBtn  = 15
+	minusBtn = 18
+)
+
 var (
 	cfg = gogadgets.Config{
 		Host: getenv("GOGADGETS_HOST", "http://192.168.88.64:80"),
@@ -35,7 +41,7 @@ var (
 						"heat": {
 							Type:      "gpio",
 							Platform:  "rpi",
-							Pin:       "38",
+							Pin:       "35",
 							Direction: "out",
 						},
 						"cool": {
@@ -47,7 +53,7 @@ var (
 						"fan": {
 							Type:      "gpio",
 							Platform:  "rpi",
-							Pin:       "36",
+							Pin:       "11",
 							Direction: "out",
 						},
 					},
@@ -85,25 +91,25 @@ func Start(debug bool, season string, hysteresis float64) {
 		cfg.Gadgets[2].Args["jobs"] = winter
 	}
 
-	btn, dial1, dial2, d := deps()
+	btn, plus, minus, d := deps()
 
 	cfg.Gadgets[1].Pin.Args["hysteresis"] = hysteresis
 
-	u := ui.New(btn, dial1, dial2, d, cfg.Master, debug)
+	u := ui.New(btn, plus, minus, d, cfg.Master, debug)
 	cfg.Endpoints = u.Handlers()
 	app := gogadgets.New(&cfg, u)
 	app.Start()
 }
 
 func deps() (*gogadgets.GPIO, *gogadgets.GPIO, *gogadgets.GPIO, *display.OLED) {
-	btn, dial1, dial2 := newGPIO(16, "falling"), newGPIO(15, "both"), newGPIO(18, "both")
+	btn, plus, minus := newGPIO(stateBtn, "falling"), newGPIO(plusBtn, "falling"), newGPIO(minusBtn, "falling")
 
 	d, err := display.New()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return btn, dial1, dial2, d
+	return btn, plus, minus, d
 }
 
 func newGPIO(i int, dir string) *gogadgets.GPIO {

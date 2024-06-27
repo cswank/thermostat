@@ -10,7 +10,6 @@ import (
 
 	"github.com/cswank/gogadgets"
 	"github.com/cswank/thermostat/internal/button"
-	"github.com/cswank/thermostat/internal/dial"
 	"github.com/cswank/thermostat/internal/gpio"
 )
 
@@ -22,8 +21,9 @@ type (
 	}
 
 	UI struct {
-		dial        dial.Dial
 		btn         button.Button
+		plus        button.Button
+		minus       button.Button
 		display     printer
 		out         chan<- gogadgets.Message
 		ti          chan int
@@ -40,15 +40,16 @@ type (
 	}
 )
 
-func New(btn, A, B gpio.Waiter, p printer, furnaceAddress string, debug bool) *UI {
+func New(btn, plus, minus gpio.Waiter, p printer, furnaceAddress string, debug bool) *UI {
 	ti := make(chan int)
 	bi := make(chan button.State)
 	return &UI{
 		ti:       ti,
 		bi:       bi,
 		external: make(chan string),
-		dial:     dial.New(A, B, temperatureInput(ti)),
 		btn:      button.New(btn, buttonInput(bi)),
+		plus:     button.New(btn, temperatureUp(ti)),
+		minus:    button.New(btn, temperatureDown(ti)),
 		display:  p,
 		furnace:  furnaceAddress,
 		debug:    debug,
@@ -56,7 +57,6 @@ func New(btn, A, B gpio.Waiter, p printer, furnaceAddress string, debug bool) *U
 }
 
 func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message) {
-	go u.dial.Start()
 	go u.btn.Start()
 	go u.input()
 
@@ -72,7 +72,6 @@ func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message)
 	}
 
 	u.btn.Close()
-	u.dial.Close()
 }
 
 func (u *UI) handleUpdate(msg gogadgets.Message) {
@@ -227,6 +226,18 @@ func (u *UI) Path() string {
 func temperatureInput(ch chan int) func(i int) {
 	return func(i int) {
 		ch <- i
+	}
+}
+
+func temperatureUp(ch chan int) func() {
+	return func() {
+		ch <- 1
+	}
+}
+
+func temperatureDown(ch chan int) func() {
+	return func() {
+		ch <- -1
 	}
 }
 
