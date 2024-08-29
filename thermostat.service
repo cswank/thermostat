@@ -1,0 +1,9 @@
+[Unit]
+Description=Thermostat
+
+[Service]
+WorkingDirectory=/home/craig
+ExecStart=/usr/local/bin/thermostat -season summer -hysteresis 1.6 -w1 28-0000003211a2
+
+[Install]
+WantedBy=multi-user.target

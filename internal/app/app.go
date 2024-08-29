@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	stateBtn = 16
-	plusBtn  = 15
-	minusBtn = 18
+	stateBtn = 15
+	plusBtn  = 13
+	minusBtn = 37
 )
 
 var (
@@ -27,7 +27,7 @@ var (
 				Location: "home",
 				Pin: gogadgets.Pin{
 					Type:      "thermometer",
-					OneWireId: "28-0000003211a2",
+					OneWireId: "",
 					Units:     "F",
 					Sleep:     15 * time.Second,
 				},
@@ -83,7 +83,7 @@ var (
 	}
 )
 
-func Start(debug bool, season string, hysteresis float64) {
+func Start(debug bool, season string, hysteresis float64, w1 string) {
 	switch season {
 	case "summer":
 		cfg.Gadgets[2].Args["jobs"] = summer
@@ -94,6 +94,7 @@ func Start(debug bool, season string, hysteresis float64) {
 	btn, plus, minus, d := deps()
 
 	cfg.Gadgets[1].Pin.Args["hysteresis"] = hysteresis
+	cfg.Gadgets[0].Pin.OneWireId = w1
 
 	u := ui.New(btn, plus, minus, d, cfg.Master, debug)
 	cfg.Endpoints = u.Handlers()

@@ -58,7 +58,7 @@ func wait(p gpio.Waiter, ch chan struct{}) {
 			log.Println("unable to wait for gpio pin")
 		}
 		ch <- struct{}{}
-		time.Sleep(400 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 	}
 }
 

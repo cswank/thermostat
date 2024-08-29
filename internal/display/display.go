@@ -62,7 +62,7 @@ func (o *OLED) Print(tt, at int, state string) {
 
 	fontTTF, _ := truetype.Parse(goregular.TTF)
 	face := truetype.NewFace(fontTTF, &truetype.Options{
-		Size: 24,
+		Size: 38,
 		DPI:  72,
 	})
 
@@ -73,37 +73,32 @@ func (o *OLED) Print(tt, at int, state string) {
 		Dst:  img,
 		Src:  &image.Uniform{image1bit.On},
 		Face: face,
-		Dot:  fixed.P(0, 24),
-	}
-
-	legend := font.Drawer{
-		Dst:  img,
-		Src:  &image.Uniform{image1bit.On},
-		Face: smallFace,
-		Dot:  fixed.P(0, 34),
+		Dot:  fixed.P(0, 42),
 	}
 
 	st := font.Drawer{
 		Dst:  img,
 		Src:  &image.Uniform{image1bit.On},
-		Face: face,
+		Face: smallFace,
 		Dot:  fixed.P(0, 60),
 	}
 
 	if state == "Off" {
-		temperature.DrawString(fmt.Sprintf("--         %02d", at))
+		temperature.DrawString(fmt.Sprintf("--    %02d", at))
 	} else {
-		temperature.DrawString(fmt.Sprintf("%02d         %02d", tt, at))
+		temperature.DrawString(fmt.Sprintf("%02d    %02d", tt, at))
 	}
 
-	legend.DrawString("target     actual")
-
-	st.DrawString(fmt.Sprintf("      %s", state))
+	st.DrawString(fmt.Sprintf("       %s", state))
 	if err := o.dev.Draw(o.dev.Bounds(), img, image.Point{}); err != nil {
 		log.Fatal(err)
 	}
 	o.lock.Unlock()
 }
+
+const (
+	width = 128
+)
 
 func (o *OLED) Message(msg string) {
 	o.lock.Lock()
@@ -111,16 +106,18 @@ func (o *OLED) Message(msg string) {
 	fontTTF, _ := truetype.Parse(goregular.TTF)
 	img := image1bit.NewVerticalLSB(o.dev.Bounds())
 
-	legend := font.Drawer{
+	size := 16.0
+
+	d := font.Drawer{
 		Dst:  img,
 		Src:  &image.Uniform{image1bit.On},
-		Face: truetype.NewFace(fontTTF, &truetype.Options{Size: 16, DPI: 72}),
-		Dot:  fixed.P(0, 34),
+		Face: truetype.NewFace(fontTTF, &truetype.Options{Size: size, DPI: 72}),
+		Dot:  fixed.P(0, 32),
 	}
 
-	w := 24
+	w := width / int(size)
 
-	legend.DrawString(fmt.Sprintf(fmt.Sprintf("%%-%ds", w/2), fmt.Sprintf(fmt.Sprintf("%%%ds", w/2), msg)))
+	d.DrawString(fmt.Sprintf("%*s", -w, fmt.Sprintf("%*s", (w+len(msg))/2, msg)))
 	if err := o.dev.Draw(o.dev.Bounds(), img, image.Point{}); err != nil {
 		log.Fatal(err)
 	}

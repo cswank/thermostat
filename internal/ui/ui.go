@@ -48,8 +48,8 @@ func New(btn, plus, minus gpio.Waiter, p printer, furnaceAddress string, debug b
 		bi:       bi,
 		external: make(chan string),
 		btn:      button.New(btn, buttonInput(bi)),
-		plus:     button.New(btn, temperatureUp(ti)),
-		minus:    button.New(btn, temperatureDown(ti)),
+		plus:     button.New(plus, temperatureUp(ti)),
+		minus:    button.New(minus, temperatureDown(ti)),
 		display:  p,
 		furnace:  furnaceAddress,
 		debug:    debug,
@@ -58,6 +58,8 @@ func New(btn, plus, minus gpio.Waiter, p printer, furnaceAddress string, debug b
 
 func (u *UI) Start(input <-chan gogadgets.Message, out chan<- gogadgets.Message) {
 	go u.btn.Start()
+	go u.plus.Start()
+	go u.minus.Start()
 	go u.input()
 
 	u.temperature.target = 70
@@ -143,7 +145,7 @@ func (u *UI) input() {
 			off.reset(5)
 		case cmd := <-u.external:
 			bye = 1
-			u.display.Message(cmd)
+			u.display.Message(u.shorten(cmd))
 			off.reset(4)
 		case <-off.t.C:
 			if presses > -1 {
@@ -154,7 +156,7 @@ func (u *UI) input() {
 			switch bye {
 			case 0:
 				bye = 1
-				u.display.Message(u.cmd)
+				u.display.Message(u.shorten(u.cmd))
 				off.reset(4)
 			case 1:
 				bye = 2
@@ -166,6 +168,10 @@ func (u *UI) input() {
 			}
 		}
 	}
+}
+
+func (u UI) shorten(s string) string {
+	return strings.Replace(s, "home ", "", 1)
 }
 
 func (u *UI) command() {
