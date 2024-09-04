@@ -30,7 +30,7 @@ type (
 	}
 
 	msg struct {
-		msg  string
+		text string
 		y    int
 		face font.Face
 	}
@@ -75,7 +75,7 @@ func (o *OLED) Clear() {
 }
 
 func (o *OLED) Message(s string) {
-	o.print(msg{msg: s, y: 38, face: o.small})
+	o.print(msg{text: s, y: 38, face: o.small})
 }
 
 func (o *OLED) Print(target, actual int, state string) {
@@ -84,8 +84,8 @@ func (o *OLED) Print(target, actual int, state string) {
 
 func (o *OLED) display(target, actual int, state string) []msg {
 	return []msg{
-		{msg: o.temperature(target, actual, state), y: 36, face: o.large},
-		{msg: state, y: 64, face: o.small},
+		{text: o.temperature(target, actual, state), y: 36, face: o.large},
+		{text: state, y: 64, face: o.small},
 	}
 }
 
@@ -106,9 +106,9 @@ func (o *OLED) print(msgs ...msg) {
 			Face: msg.face,
 		}
 
-		rec, _ := d.BoundString(msg.msg)
+		rec, _ := d.BoundString(msg.text)
 		d.Dot = fixed.P(64-rec.Max.X.Ceil()/2, msg.y)
-		d.DrawString(msg.msg)
+		d.DrawString(msg.text)
 	}
 
 	o.lock.Lock()
