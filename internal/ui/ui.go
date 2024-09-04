@@ -171,7 +171,7 @@ func (u *UI) input() {
 }
 
 func (u UI) shorten(s string) string {
-	return strings.Replace(s, "home ", "", 1)
+	return strings.Replace(strings.Replace(s, "home ", "", 1), " furnace", "", 1)
 }
 
 func (u *UI) command() {
