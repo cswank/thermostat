@@ -97,7 +97,7 @@ func (o *OLED) print(msg string, size float64, y int) {
 	d.Dot = fixed.P(64-rec.Max.X.Ceil()/2, y)
 
 	d.DrawString(msg)
-	if err := o.dev.Draw(o.dev.Bounds(), img, image.Point{}); err != nil {
+	if err := o.dev.Draw(o.bounds, img, image.Point{}); err != nil {
 		log.Fatal(err)
 	}
 
