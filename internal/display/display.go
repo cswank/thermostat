@@ -68,13 +68,15 @@ func (o *OLED) Clear() {
 	o.dev.Halt()
 }
 
-func (o *OLED) Message(msg string) {
-	o.print(msg, 38, o.small)
+func (o *OLED) Message(s string) {
+	o.print(msg{msg: s, y: 38, face: o.small})
 }
 
 func (o *OLED) Print(target, actual int, state string) {
-	o.print(o.temperature(target, actual, state), 36, o.large)
-	o.print(state, 60, o.small)
+	o.print(
+		msg{msg: o.temperature(target, actual, state), y: 36, face: o.large},
+		msg{msg: state, y: 60, face: o.small},
+	)
 }
 
 func (o *OLED) temperature(target, actual int, state string) string {
@@ -84,23 +86,31 @@ func (o *OLED) temperature(target, actual int, state string) string {
 	return fmt.Sprintf("%02d    %02d", target, actual)
 }
 
-func (o *OLED) print(msg string, y int, face font.Face) {
+type msg struct {
+	msg  string
+	y    int
+	face font.Face
+}
+
+func (o *OLED) print(msgs ...msg) {
 	o.lock.Lock()
 
-	img := image1bit.NewVerticalLSB(o.bounds)
+	for _, msg := range msgs {
+		img := image1bit.NewVerticalLSB(o.bounds)
 
-	d := font.Drawer{
-		Dst:  img,
-		Src:  &image.Uniform{C: image1bit.On},
-		Face: face,
-	}
+		d := font.Drawer{
+			Dst:  img,
+			Src:  &image.Uniform{C: image1bit.On},
+			Face: msg.face,
+		}
 
-	rec, _ := d.BoundString(msg)
-	d.Dot = fixed.P(64-rec.Max.X.Ceil()/2, y)
+		rec, _ := d.BoundString(msg.msg)
+		d.Dot = fixed.P(64-rec.Max.X.Ceil()/2, msg.y)
 
-	d.DrawString(msg)
-	if err := o.dev.Draw(o.bounds, img, image.Point{}); err != nil {
-		log.Fatal(err)
+		d.DrawString(msg.msg)
+		if err := o.dev.Draw(o.bounds, img, image.Point{}); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	o.lock.Unlock()
