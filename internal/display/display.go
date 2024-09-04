@@ -28,6 +28,12 @@ type (
 		small  font.Face
 		large  font.Face
 	}
+
+	msg struct {
+		msg  string
+		y    int
+		face font.Face
+	}
 )
 
 func New() (*OLED, error) {
@@ -55,7 +61,7 @@ func New() (*OLED, error) {
 		bc:     bc,
 		dev:    dev,
 		small:  truetype.NewFace(font, &truetype.Options{Size: 24, DPI: 72}),
-		large:  truetype.NewFace(font, &truetype.Options{Size: 38, DPI: 72}),
+		large:  truetype.NewFace(font, &truetype.Options{Size: 40, DPI: 72}),
 		bounds: dev.Bounds(),
 	}, nil
 }
@@ -73,31 +79,27 @@ func (o *OLED) Message(s string) {
 }
 
 func (o *OLED) Print(target, actual int, state string) {
-	o.print(
-		msg{msg: o.temperature(target, actual, state), y: 36, face: o.large},
-		msg{msg: state, y: 60, face: o.small},
-	)
+	o.print(o.display(target, actual, state)...)
+}
+
+func (o *OLED) display(target, actual int, state string) []msg {
+	return []msg{
+		{msg: o.temperature(target, actual, state), y: 36, face: o.large},
+		{msg: state, y: 64, face: o.small},
+	}
 }
 
 func (o *OLED) temperature(target, actual int, state string) string {
 	if state == "Off" {
-		return fmt.Sprintf("--    %02d", actual)
+		return fmt.Sprintf("--   %02d", actual)
 	}
-	return fmt.Sprintf("%02d    %02d", target, actual)
-}
-
-type msg struct {
-	msg  string
-	y    int
-	face font.Face
+	return fmt.Sprintf("%02d   %02d", target, actual)
 }
 
 func (o *OLED) print(msgs ...msg) {
-	o.lock.Lock()
+	img := image1bit.NewVerticalLSB(o.bounds)
 
 	for _, msg := range msgs {
-		img := image1bit.NewVerticalLSB(o.bounds)
-
 		d := font.Drawer{
 			Dst:  img,
 			Src:  &image.Uniform{C: image1bit.On},
@@ -106,11 +108,13 @@ func (o *OLED) print(msgs ...msg) {
 
 		rec, _ := d.BoundString(msg.msg)
 		d.Dot = fixed.P(64-rec.Max.X.Ceil()/2, msg.y)
-
 		d.DrawString(msg.msg)
-		if err := o.dev.Draw(o.bounds, img, image.Point{}); err != nil {
-			log.Fatal(err)
-		}
+	}
+
+	o.lock.Lock()
+
+	if err := o.dev.Draw(o.bounds, img, image.Point{}); err != nil {
+		log.Fatal(err)
 	}
 
 	o.lock.Unlock()
