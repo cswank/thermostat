@@ -23,9 +23,10 @@ type (
 	OLED struct {
 		bc     i2c.BusCloser
 		dev    *ssd1306.Dev
-		font   *truetype.Font
 		bounds image.Rectangle
 		lock   sync.Mutex
+		small  font.Face
+		large  font.Face
 	}
 )
 
@@ -53,7 +54,8 @@ func New() (*OLED, error) {
 	return &OLED{
 		bc:     bc,
 		dev:    dev,
-		font:   font,
+		small:  truetype.NewFace(font, &truetype.Options{Size: 24, DPI: 72}),
+		large:  truetype.NewFace(font, &truetype.Options{Size: 38, DPI: 72}),
 		bounds: dev.Bounds(),
 	}, nil
 }
@@ -67,12 +69,12 @@ func (o *OLED) Clear() {
 }
 
 func (o *OLED) Message(msg string) {
-	o.print(msg, 24, 38)
+	o.print(msg, 38, o.small)
 }
 
 func (o *OLED) Print(target, actual int, state string) {
-	o.print(o.temperature(target, actual, state), 38, 36)
-	o.print(state, 24, 60)
+	o.print(o.temperature(target, actual, state), 36, o.large)
+	o.print(state, 60, o.small)
 }
 
 func (o *OLED) temperature(target, actual int, state string) string {
@@ -82,15 +84,15 @@ func (o *OLED) temperature(target, actual int, state string) string {
 	return fmt.Sprintf("%02d    %02d", target, actual)
 }
 
-func (o *OLED) print(msg string, size float64, y int) {
+func (o *OLED) print(msg string, y int, face font.Face) {
 	o.lock.Lock()
 
 	img := image1bit.NewVerticalLSB(o.bounds)
 
 	d := font.Drawer{
 		Dst:  img,
-		Src:  &image.Uniform{image1bit.On},
-		Face: truetype.NewFace(o.font, &truetype.Options{Size: size, DPI: 72}),
+		Src:  &image.Uniform{C: image1bit.On},
+		Face: face,
 	}
 
 	rec, _ := d.BoundString(msg)
