@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -108,7 +109,7 @@ func (u *UI) updateActual(val gogadgets.Value) {
 }
 
 func (u *UI) updateState(v *gogadgets.Value, st button.State) {
-	u.state = button.State(st)
+	u.state = st
 	f, _ := v.ToFloat()
 	u.temperature.target = int(math.Round(f))
 	u.external <- v.Cmd
@@ -209,12 +210,33 @@ func (u *UI) Handlers() []gogadgets.HTTPHandler {
 }
 
 func (u *UI) status(w http.ResponseWriter, r *http.Request) {
-	// <script src="https://unpkg.com/htmx.org@1.9.11" integrity="sha384-0gxUXCCR8yv9FM2b+U3FDbsKthCI66oH5IA9fHppQq9DDMHuMauqq1ZHBpJxQ0J0" crossorigin="anonymous"></script>
+	q := r.URL.Query()
+	switch q.Get("t") {
+	case "1":
+		u.temperature.target += 1
+	case "-1":
+		u.temperature.target -= 1
+	}
+
+	if q.Get("s") == "next" {
+		u.state.Next()
+	}
+
+	minus := `<a href="?t=-1">-</a>`
+	plus := `<a href="?t=1">+</a>`
+
+	t := strconv.Itoa(u.temperature.target)
+	if u.state == button.Off {
+		minus, plus = "", ""
+		t = "--"
+	}
+
 	fmt.Fprintf(w, fmt.Sprintf(`<!DOCTYPE html>
 <html>
+<h2><a href="?s=next">%s</a></h2>
 <h3>Temperature: %d</h3>
-<h3>Target: %d</h3>
-</html>`, u.temperature.actual, u.temperature.target))
+<h3>%s Target: %s %s</h3>
+</html>`, u.state, u.temperature.actual, minus, t, plus))
 }
 
 func (u *UI) settings(w http.ResponseWriter, r *http.Request) {
