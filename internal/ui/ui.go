@@ -227,15 +227,15 @@ func (u *UI) status(w http.ResponseWriter, r *http.Request) {
 
 	t := strconv.Itoa(u.temperature.target)
 	if u.state == button.Off {
-		minus, plus = "", ""
-		t = "--"
+		t, minus, plus = "--", "", ""
 	}
 
 	fmt.Fprintf(w, fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <h2><a href="?s=next">%s</a></h2>
 <h3>Temperature: %d</h3>
-<h3>%s Target: %s %s</h3>
+<h3>Target: %s %s %s</h3>
+<div><a href="/">reload</a></div>
 </html>`, u.state, u.temperature.actual, minus, t, plus))
 }
 
