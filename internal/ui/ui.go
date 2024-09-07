@@ -211,15 +211,19 @@ func (u *UI) Handlers() []gogadgets.HTTPHandler {
 
 func (u *UI) status(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
+	var changed bool
 	switch q.Get("t") {
 	case "1":
 		u.temperature.target += 1
+		changed = true
 	case "-1":
 		u.temperature.target -= 1
+		changed = true
 	}
 
 	if q.Get("s") == "next" {
 		u.state.Next()
+		changed = true
 	}
 
 	minus := `<a href="?t=-1">-</a>`
@@ -235,8 +239,12 @@ func (u *UI) status(w http.ResponseWriter, r *http.Request) {
 <h2><a href="?s=next">%s</a></h2>
 <h3>Temperature: %d</h3>
 <h3>Target: %s %s %s</h3>
-<div><a href="/">reload</a></div>
+<div><a href="/">refresh</a></div>
 </html>`, u.state, u.temperature.actual, minus, t, plus))
+
+	if changed {
+		u.command()
+	}
 }
 
 func (u *UI) settings(w http.ResponseWriter, r *http.Request) {
