@@ -79,14 +79,12 @@ func (o *OLED) Message(s string) {
 }
 
 func (o *OLED) Print(target, actual int, state string) {
-	o.print(o.display(target, actual, state)...)
-}
-
-func (o *OLED) display(target, actual int, state string) []msg {
-	return []msg{
+	msgs := []msg{
 		{text: o.temperature(target, actual, state), y: 36, face: o.large},
 		{text: state, y: 64, face: o.small},
 	}
+
+	o.print(msgs...)
 }
 
 func (o *OLED) temperature(target, actual int, state string) string {
