@@ -98,15 +98,7 @@ func (o *OLED) print(msgs ...msg) {
 	img := image1bit.NewVerticalLSB(o.bounds)
 
 	for _, msg := range msgs {
-		d := font.Drawer{
-			Dst:  img,
-			Src:  &image.Uniform{C: image1bit.On},
-			Face: msg.face,
-		}
-
-		rec, _ := d.BoundString(msg.text)
-		d.Dot = fixed.P(64-rec.Max.X.Ceil()/2, msg.y)
-		d.DrawString(msg.text)
+		msg.draw(img)
 	}
 
 	o.lock.Lock()
@@ -116,4 +108,16 @@ func (o *OLED) print(msgs ...msg) {
 	}
 
 	o.lock.Unlock()
+}
+
+func (m msg) draw(img *image1bit.VerticalLSB) {
+	d := font.Drawer{
+		Dst:  img,
+		Src:  &image.Uniform{C: image1bit.On},
+		Face: m.face,
+	}
+
+	rec, _ := d.BoundString(m.text)
+	d.Dot = fixed.P(64-rec.Max.X.Ceil()/2, m.y)
+	d.DrawString(m.text)
 }
