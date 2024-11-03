@@ -13,8 +13,8 @@ import (
 
 const (
 	stateBtn = 15
-	plusBtn  = 13
-	minusBtn = 37
+	plusBtn  = 37
+	minusBtn = 13
 )
 
 var (
@@ -79,7 +79,7 @@ var (
 
 	summer = []any{
 		"0   6    *  *  *  cool home to 78 F",
-		"0   8    *  *  *  turn off furnace",
+		"0   8    *  *  *  cool home to 82 F",
 	}
 )
 

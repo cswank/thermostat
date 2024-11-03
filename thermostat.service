@@ -3,7 +3,7 @@ Description=Thermostat
 
 [Service]
 WorkingDirectory=/home/craig
-ExecStart=/usr/local/bin/thermostat -season summer -hysteresis 1.6 -w1 28-0000003211a2
+ExecStart=/usr/local/bin/thermostat -season winter -hysteresis 1.6 -w1 28-000000311fff
 
 [Install]
 WantedBy=multi-user.target
