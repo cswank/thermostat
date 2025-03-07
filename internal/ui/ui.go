@@ -185,12 +185,16 @@ func (u *UI) command() {
 		u.cmd = "turn off furnace"
 	}
 
+	u.doCommand(u.cmd)
+}
+
+func (u *UI) doCommand(cmd string) {
 	u.out <- gogadgets.Message{
 		UUID:   gogadgets.GetUUID(),
 		Type:   gogadgets.COMMAND,
 		Sender: "thermostat",
 		Host:   u.furnace,
-		Body:   u.cmd,
+		Body:   cmd,
 	}
 }
 

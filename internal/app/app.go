@@ -41,13 +41,13 @@ var (
 						"heat": {
 							Type:      "gpio",
 							Platform:  "rpi",
-							Pin:       "35",
+							Pin:       "40",
 							Direction: "out",
 						},
 						"cool": {
 							Type:      "gpio",
 							Platform:  "rpi",
-							Pin:       "40",
+							Pin:       "35",
 							Direction: "out",
 						},
 						"fan": {
